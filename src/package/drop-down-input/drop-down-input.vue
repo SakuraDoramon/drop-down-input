@@ -111,7 +111,6 @@ export default {
   methods: {
     // 输入框聚焦
     onFocus () {
-      console.log(this.is_show, 'this.is_show');
       this.is_show = true
       this.is_close_show = false
       this.$emit('focus')
