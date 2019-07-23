@@ -1,7 +1,7 @@
 <template>
   <div class="drop-down-input">
     <span @mouseenter="enter" @mouseleave="leave">
-      <input :value="value" :maxlength="maxlength" :placeholder="placeholder" @input="updateVal($event.target.value)" @focus="onFocus" @blur="onBlur($event.target.value)" :disabled="disabled" :error="!!errorMessage"/>
+      <input :value="value" :maxlength="maxlength" :placeholder="placeholder" @keydown.down.prevent="selectDown" @keydown.enter="selectOptionEnter" @input="updateVal($event.target.value)" @focus="onFocus" @blur="onBlur($event.target.value)" :disabled="disabled" :error="!!errorMessage"/>
       <common-icon type="ios-arrow-down" :size="14" :color="errorMessage ? '#ed4014' : '#808695'" :class="{'icon-close': true, 'icon-select-animate': is_show}" v-if="is_show_arrow"></common-icon>
       <common-icon type="ios-close-circle" :size="14" color="#808695" class="icon-close" v-if="is_close_show" @click.native="onClear"></common-icon>
       <p class="error-message" v-if="errorMessage">{{ errorMessage }}</p>
@@ -9,7 +9,7 @@
     <transition name="drop">
       <ul class="datalist" v-if="is_show">
         <template v-if="options.length">
-          <li class="option" v-for="item in options" :key="item.label" :selected="item.label === value" @click="selectOption(item.label)">{{ item.label }}</li>
+          <li class="option" v-for="(item,index) in options" :key="item.label" :selected="item.label === value" :class="{gray:index==now}" @click="selectOption(item.label)">{{ item.label }}</li>
         </template>
         <template v-else>
           <li class="option not-find">无匹配数据</li>
@@ -20,9 +20,9 @@
 </template>
 
 <script>
-import CommonIcon from '../common-icon/common-icon'
+import CommonIcon from 'components/common-icon'
 export default {
-  name: 'dropDownInput',
+  name: 'drop-down-input-select',
   components: {
     CommonIcon
   },
@@ -31,7 +31,9 @@ export default {
       is_show: false, // 下拉框
       is_close_show: false, // 清除按钮
       errorMessage: '',
-      options: [] // 过滤后下拉列表
+      options: [], // 过滤后下拉列表
+      keyword:'',
+      now: -1, // up/down下标
     }
   },
   props: {
@@ -70,11 +72,6 @@ export default {
       type: String,
       dafault: 'label',
       required: true
-    },
-    // 错误提示
-    errorMsg: {
-      type: String,
-      default: '请选择或者输入正确值'
     }
   },
   watch: {
@@ -96,18 +93,6 @@ export default {
       })
     }
   },
-  mounted () {
-    // 下拉列表初始化
-    this.dropDownList.forEach(n => {
-      // 找到子元素keyname的value值
-      for (const key in n) {
-        if (key === this.keyName) {
-          n.label = n[key]
-        }
-      }
-    })
-    this.options = this.dropDownList
-  },
   methods: {
     // 输入框聚焦
     onFocus () {
@@ -120,12 +105,12 @@ export default {
       this.is_show = false
       if (val) {
         if (val.length > this.maxlength) {
-          this.errorMessage = `最大长度限制${this.maxLength}个字符`
+          this.errorMessage = '最大长度限制50个字符'
         } else {
           this.errorMessage = ''
         }
       } else {
-        this.errorMessage = this.errorMsg
+        this.errorMessage = ''
       }
     },
     // 鼠标移入
@@ -139,7 +124,7 @@ export default {
     // 清除操作
     onClear () {
       this.$emit('input', '')
-      this.errorMessage = '请补充开户行信息'
+      this.errorMessage = ''
       this.$emit('clear', '')
     },
     // 自定义v-model
@@ -151,18 +136,50 @@ export default {
     // 选择列表项
     selectOption (val) {
       this.$emit('input', val)
+    },
+    // select-enter
+    selectOptionEnter (e) {
+      this.$emit('input', this.keyword)
+    },
+    // select-down
+    selectDown () {
+      this.now++;
+      if(this.now === this.options.length) this.now=-1;
+      this.keyword = this.options[this.now].label;
+    },
+    // select-up
+    selectUp () {
+      this.now--;
+      if(this.now === -2) this.now=this.options.length-1;
+      this.keyword = this.options[this.now].label;
     }
   }
 }
 </script>
 
 <style lang="less">
+
 .drop-down-input {
   color: #515a6e;
   position: relative;
   display: inline-block;
   box-sizing: border-box;
   width: 100%;
+  .title{
+    color:#ffffff;
+    text-align: center;
+  }
+  .gray{
+    background-color: #eee;
+  }
+  .textprimary{
+      color: #3c763d;
+      text-align: center;
+      font-family: "Microsoft YaHei UI";
+      font-size: larger;
+      font-weight: bolder;
+      font-size: 30px;
+  }
   input {
     display: inline-block;
     width: 100%;
@@ -236,10 +253,8 @@ export default {
     color: #515a6e;
     z-index: 900;
     .option {
-      width: 100%;
       margin: 0;
       line-height: normal;
-      text-align: left;
       padding: 7px 16px;
       clear: both;
       color: #515a6e;
@@ -264,7 +279,7 @@ export default {
   }
   .error-message {
     position: absolute;
-    top: 50%;
+    top: 100%;
     left: 0;
     line-height: 1;
     padding-top: 6px;
